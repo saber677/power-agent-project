@@ -38,7 +38,7 @@ def check_dependencies():
 PROVIDERS = {
     "openai": ("https://api.openai.com/v1", "gpt-4"),
     "deepseek": ("https://api.deepseek.com/v1", "deepseek-chat"),
-    "qwen": ("https://dashscope.aliyuncs.com/compatible-mode/v1", "qwen-plus"),
+    "qwen": ("https://dashscope.aliyuncs.com/compatible-mode/v1", "qwen3.7-max"),
     "local": ("http://localhost:11434/v1", "llama3"),
 }
 
