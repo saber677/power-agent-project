@@ -118,7 +118,13 @@ def run_chat():
     # --- 对话循环 ---
     while True:
         try:
-            user_input = input("你: ").strip()
+            # 用 buffer 读取原始字节，避免 input() 的 UTF-8 解码异常
+            sys.stdout.write("你: ")
+            sys.stdout.flush()
+            raw = sys.stdin.buffer.readline()
+            if not raw:  # EOF
+                break
+            user_input = raw.decode("utf-8", errors="replace").strip()
             if not user_input:
                 continue
 
