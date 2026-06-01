@@ -1,5 +1,6 @@
 """主Agent类"""
 
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 from ..tools.registry import Registry
 from ..tools.base import Tool
@@ -18,6 +19,7 @@ class PowerAgent:
         self.config = config or AgentConfig()
         self.registry = Registry()
         self._execution_history: List[ExecutionResult] = []
+        self._chat_history: List[Dict[str, str]] = []
         self._llm: Optional[LLMClient] = None
 
     @property
@@ -46,14 +48,51 @@ class PowerAgent:
             self.config.llm_model = model
         self._llm = None
 
+    def _build_system_prompt(self, user_system_prompt: Optional[str] = None) -> Optional[str]:
+        """构建完整的 system prompt: agent.md + 动态 context + 用户传入"""
+        parts = []
+
+        # 1. 读取 agent.md
+        agent_md = self._load_agent_md()
+        if agent_md:
+            parts.append(agent_md)
+
+        # 2. 注入动态 context
+        context_data = self.registry.context.to_dict()
+        if context_data:
+            ctx_lines = ["## 当前上下文"]
+            for k, v in context_data.items():
+                ctx_lines.append(f"- {k}: {v}")
+            parts.append("\n".join(ctx_lines))
+
+        # 3. 用户传入的 system_prompt
+        if user_system_prompt:
+            parts.append(user_system_prompt)
+
+        return "\n\n".join(parts) if parts else None
+
+    def _load_agent_md(self) -> Optional[str]:
+        """加载 agent.md 文件内容"""
+        # 从项目根目录查找 agent.md
+        search_paths = [
+            Path.cwd() / "agent.md",
+            Path(__file__).parent.parent.parent.parent / "agent.md",
+        ]
+        for p in search_paths:
+            if p.exists():
+                content = p.read_text(encoding="utf-8").strip()
+                return content if content else None
+        return None
+
     def chat(self, message: str, system_prompt: Optional[str] = None, **kwargs) -> str:
         """带 function calling 和上下文记忆的对话方法"""
-        if not hasattr(self, '_chat_history'):
-            self._chat_history = []
-
         messages = []
-        if system_prompt:
-            messages.append({"role": "system", "content": system_prompt})
+
+        # 构建 system prompt: agent.md + 动态 context + 用户传入的 system_prompt
+        final_system = self._build_system_prompt(system_prompt)
+        if final_system:
+            messages.append({"role": "system", "content": final_system})
+
         messages.extend(self._chat_history)
         messages.append({"role": "user", "content": message})
 

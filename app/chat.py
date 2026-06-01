@@ -58,16 +58,17 @@ def get_provider_config(name: str) -> dict:
 
 
 def switch_provider(agent, name: str):
-    """运行时切换大模型厂商，重建 OpenAI 客户端"""
+    """运行时切换大模型厂商"""
     config = get_provider_config(name)
     if not config["api_key"]:
         print(f"❌ 未找到 {name.upper()}_API_KEY，请在 .env.local 中配置")
         return
-    from openai import OpenAI
-    agent.llm_client.api_key = config["api_key"]
-    agent.llm_client.base_url = config["base_url"]
-    agent.llm_client.model = config["model"]
-    agent.llm_client.client = OpenAI(api_key=config["api_key"], base_url=config["base_url"])
+    agent.set_llm(
+        api_key=config["api_key"],
+        base_url=config["base_url"],
+        model=config["model"],
+        provider=name,
+    )
     print(f"✅ 已切换到: {name} | 模型: {config['model']} | 地址: {config['base_url']}")
 
 
@@ -116,15 +117,14 @@ def run_chat():
     print("\n命令: /model <厂商>切换模型 | /load 增量加载插件 | /load <名称>加载指定插件 | /unload <名称>卸载 | /tools 查看 | /exit 退出\n")
 
     # --- 对话循环 ---
+    from prompt_toolkit import PromptSession
+    from prompt_toolkit.patch_stdout import patch_stdout
+    session = PromptSession()
+
     while True:
         try:
-            # 用 buffer 读取原始字节，避免 input() 的 UTF-8 解码异常
-            sys.stdout.write("你: ")
-            sys.stdout.flush()
-            raw = sys.stdin.buffer.readline()
-            if not raw:  # EOF
-                break
-            user_input = raw.decode("utf-8", errors="replace").strip()
+            with patch_stdout():
+                user_input = session.prompt("你: ").strip()
             if not user_input:
                 continue
 
