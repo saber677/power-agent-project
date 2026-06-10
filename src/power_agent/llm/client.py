@@ -40,6 +40,24 @@ class LLMClient:
         except Exception as e:
             raise PowerAgentError(f"LLM调用失败: {e}")
 
+    def chat_with_tools(self, messages: List[Dict], tools: Optional[List[Dict]] = None,
+                        temperature: float = 0.7, **kwargs):
+        """带工具调用的对话，返回原始 response 对象"""
+        if not self.api_key:
+            raise PowerAgentError("API密钥未设置")
+        params = {"model": self.model, "messages": messages, "temperature": temperature, **kwargs}
+        if tools:
+            params["tools"] = tools
+        import time
+        for attempt in range(3):
+            try:
+                return self.client.chat.completions.create(**params)
+            except Exception as e:
+                if ("utf-8" in str(e).lower() or "decode" in str(e).lower()) and attempt < 2:
+                    time.sleep(0.5)
+                    continue
+                raise PowerAgentError(f"LLM调用失败: {e}")
+
     def stream_chat_completion(self, messages: List[Dict[str, str]], temperature: float = 0.7, **kwargs):
         if not self.api_key:
             raise PowerAgentError("API密钥未设置")

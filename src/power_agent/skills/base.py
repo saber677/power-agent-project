@@ -60,6 +60,10 @@ class Skill(ABC):
     def execute(self, task: str, **kwargs) -> Any:
         pass
 
+    def can_handle(self, task: str) -> bool:
+        """判断该技能是否能处理此任务，子类可覆盖实现精确匹配"""
+        return True
+
     def __call__(self, task: str, **kwargs) -> Any:
         return self.execute(task, **kwargs)
 

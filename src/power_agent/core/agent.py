@@ -174,8 +174,10 @@ class PowerAgent:
         return execution_result
 
     def execute(self, command: str, **kwargs) -> ExecutionResult:
-        """智能执行命令 - 自动选择最合适的工具或技能"""
+        """智能执行命令 - 通过 can_handle 匹配最合适的技能"""
         for skill in self.registry.list_skills():
+            if not skill.can_handle(command):
+                continue
             try:
                 result = skill.execute(command, **kwargs)
                 if result is not None:
